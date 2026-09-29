@@ -301,6 +301,20 @@ function fmtDate(iso){
   return new Date(y,m-1,d).toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
 }
 
+/* ---------- machine-readable record, embedded in the PDF's XMP metadata ---------- */
+const SCHEMA_NS="https://nateapathy.github.io/pte/ns/1.0/",SCHEMA_VERSION=1;
+function buildRecord(){
+  const v=k=>has(k)?String(S[k]).trim():null, n=k=>has(k)?Number(S[k]):null;
+  const r={schema:"pte-evaluation",schema_version:SCHEMA_VERSION,generated_at:new Date().toISOString(),
+    study_pi:v("pi"),study_name:v("study"),evaluator_first:v("first"),evaluator_last:v("last"),date:v("date")};
+  SECTIONS.forEach(sec=>sec.items.forEach(([k])=>{
+    if(sec.notes)r[k]=v(k);
+    else{r[k]=n(k);if(sec.overall)r[k+"_comment"]=v(k+"_c")}
+  }));
+  r.total_score=total();
+  return r;
+}
+
 /* ---------- PDF (generated in-browser with jsPDF; nothing leaves the page) ---------- */
 function downloadPDF(){
   const missing=required().filter(k=>!has(k));
@@ -373,6 +387,10 @@ function downloadPDF(){
     doc.text((S.study?S.study+" · ":"")+"Pragmatic Trial Evaluation",M,H-28);
     doc.text("Page "+p+" of "+pages,W-M,H-28,{align:"right"});
   }
+  const rec=buildRecord();
+  doc.setDocumentProperties({title:"Pragmatic Trial Evaluation"+(S.study?" — "+S.study.trim():""),
+    subject:"pte-evaluation v"+SCHEMA_VERSION,author:evaluator,keywords:"pte-evaluation",creator:"nateapathy.github.io/pte"});
+  doc.addMetadata(esc(JSON.stringify(rec)),SCHEMA_NS);   // XML-escaped JSON inside XMP
   const slug=s=>String(s||"").trim().replace(/[^\w]+/g,"-").replace(/^-|-$/g,"");
   const name=["PTE",slug(S.study)||"study",slug(S.last),S.date].filter(Boolean).join("_");
   doc.save(name+".pdf");
