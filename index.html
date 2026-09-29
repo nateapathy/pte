@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pragmatic Trial Evaluation</title>
+<style>
+  /* University of Maryland palette — matches the Critical Reading Worksheet */
+  :root{
+    --bg:#f5f3ef; --panel:#ffffff; --ink:#242220; --muted:#6d6862;
+    --line:#e5e0d8; --accent:#c01230; --accent-ink:#fff; --accent-soft:#f7e8ea;
+    --gold:#ffd200; --bronze:#96612a; --badge-ink:#ffffff;
+    --ok:#3a7d53; --warn:#a9671e; --chip:#efece6; --shadow:0 1px 3px rgba(40,30,20,.09);
+    --radius:10px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#1b1917; --panel:#252220; --ink:#ece7e0; --muted:#a49d94;
+      --line:#39342e; --accent:#ef3b52; --accent-ink:#fff; --accent-soft:#3a2224;
+      --gold:#ffd200; --bronze:#c98f4f; --badge-ink:#241a10;
+      --ok:#5cbf8a; --warn:#d8934e; --chip:#302b26; --shadow:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:0 18px 120px}
+
+  /* header */
+  header.top{position:sticky;top:0;z-index:20;background:var(--bg);
+    border-bottom:1px solid var(--line);padding:14px 18px 12px;margin:0 0 18px}
+  header.top .row{max-width:920px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  h1{font-size:18px;margin:0;font-weight:650;letter-spacing:-.01em}
+  h1 span{color:var(--muted);font-weight:400;font-size:13px;display:block;margin-top:1px}
+  .progwrap{flex:1;min-width:160px}
+  .progbar{height:7px;background:var(--chip);border-radius:99px;overflow:hidden}
+  .progbar>i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+  .progtxt{font-size:11px;color:var(--muted);margin-top:3px}
+  .toolbtns{display:flex;gap:6px;flex-wrap:wrap}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);padding:7px 12px;font-size:13px;font-weight:550}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  button.primary:hover{filter:brightness(1.06)}
+  button.del:hover{border-color:var(--warn);color:var(--warn)}
+
+  /* notice banner */
+  .tipbar{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);
+    border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;
+    padding:11px 13px;margin-bottom:16px;font-size:13px;color:var(--ink)}
+  .tipbar .ic{flex:none;font-size:15px;line-height:1.3}
+
+  /* study info card */
+  .metacard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .metacard h2{font-size:15px;margin:0 0 4px;font-weight:600}
+  label.lab{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 4px}
+  input[type=text],input[type=date],textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);
+    border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea{resize:vertical;min-height:60px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media(max-width:620px){.grid2{grid-template-columns:1fr}}
+  .req{color:var(--accent)}
+
+  /* sections */
+  .sec{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sec>.head{display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;user-select:none}
+  .sec>.head:hover{background:var(--accent-soft)}
+  .sec>.head .num{font-size:11px;font-weight:700;color:var(--badge-ink);background:var(--bronze);
+    width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex:none}
+  .sec>.head h2{font-size:15px;margin:0;font-weight:600;flex:1}
+  .sec>.head .dot{width:9px;height:9px;border-radius:99px;background:var(--line);flex:none}
+  .sec>.head .dot.part{background:var(--bronze)} .sec>.head .dot.full{background:var(--gold)}
+  .sec>.head .chev{color:var(--muted);transition:transform .2s;flex:none}
+  .sec.open>.head .chev{transform:rotate(90deg)}
+  .sec>.body{display:none;padding:4px 15px 16px;border-top:1px solid var(--line)}
+  .sec.open>.body{display:block}
+  .intro{font-size:13px;color:var(--muted);margin:12px 0 4px}
+  .hint{font-size:12px;color:var(--muted);margin:2px 0 0}
+
+  /* rating items */
+  .item{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .item:first-of-type{border-top:none;padding-top:0}
+  .item .q{font-size:14px;font-weight:600;margin:0 0 7px}
+  .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .scale.s11{grid-template-columns:repeat(11,1fr);gap:4px}
+  @media(max-width:620px){
+    .scale{gap:4px}
+    .scale.s11{grid-template-columns:repeat(6,1fr)}
+  }
+  .opt{position:relative}
+  .opt input{position:absolute;opacity:0;pointer-events:none}
+  .opt label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    height:100%;min-height:52px;text-align:center;padding:6px 6px;border:1px solid var(--line);border-radius:8px;
+    background:var(--bg);cursor:pointer;font-size:12px;line-height:1.25;color:var(--muted);transition:.12s}
+  .scale.s11 .opt label{min-height:38px}
+  @media(max-width:620px){
+    .opt label{font-size:10px;padding:6px 2px}
+  }
+  .opt label b{font-size:15px;color:var(--ink);font-weight:650}
+  .opt label:hover{border-color:var(--accent)}
+  .opt input:focus-visible+label{box-shadow:0 0 0 3px var(--accent-soft);border-color:var(--accent)}
+  .opt input:checked+label{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .opt input:checked+label b{color:var(--accent-ink)}
+  .anchors{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
+  .clearone{background:none;border:none;color:var(--muted);font-size:11px;padding:2px 0;margin-top:4px;font-weight:500}
+  .clearone:hover{color:var(--accent)}
+
+  .guide p.q{font-weight:600}
+  .field{margin-top:10px}
+
+  /* total */
+  .total{display:flex;align-items:center;gap:14px;margin-top:18px;padding:14px 16px;border-radius:10px;
+    background:var(--accent-soft);border:1px solid var(--line)}
+  .total .big{font-size:30px;font-weight:700;color:var(--accent);line-height:1}
+  .total .big small{font-size:15px;color:var(--muted);font-weight:500}
+  .total .tl{font-size:13px;color:var(--muted)}
+  .total .tl b{color:var(--ink);display:block;font-size:14px}
+
+  .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+  .actions button{padding:10px 16px;font-size:14px}
+  .msg{font-size:12px;color:var(--warn);text-align:right;margin-top:6px;min-height:16px}
+  footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="row">
+    <h1>Pragmatic Trial Evaluation<span>Criteria for reviewing proposed pragmatic trials</span></h1>
+    <div class="progwrap">
+      <div class="progbar"><i id="progFill"></i></div>
+      <div class="progtxt" id="progTxt">0% complete</div>
+    </div>
+    <div class="toolbtns">
+      <button class="del" onclick="clearForm()">Clear</button>
+      <button class="primary" onclick="downloadPDF()">Download PDF</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tipbar">
+    <span class="ic">🔒</span>
+    <div><b>Nothing is saved or sent anywhere.</b> Your answers exist only in this browser tab — closing or reloading the page erases them. When you're done, click <b>Download PDF</b> to keep a copy.</div>
+  </div>
+
+  <div class="metacard">
+    <h2>Study information</h2>
+    <div class="grid2">
+      <div><label class="lab" for="pi">Study PI</label><input type="text" id="pi" autocomplete="off"></div>
+      <div><label class="lab" for="study">Name of study</label><input type="text" id="study" autocomplete="off"></div>
+      <div><label class="lab" for="first">Person completing form — first name</label><input type="text" id="first" autocomplete="off"></div>
+      <div><label class="lab" for="last">Person completing form — last name</label><input type="text" id="last" autocomplete="off"></div>
+      <div><label class="lab" for="date">Date</label><input type="date" id="date"></div>
+    </div>
+  </div>
+
+  <div id="sections"></div>
+
+  <div class="actions">
+    <button class="del" onclick="clearForm()">Clear form</button>
+    <button class="primary" onclick="downloadPDF()">Download completed form (PDF)</button>
+  </div>
+  <div class="msg" id="msg"></div>
+
+  <footer>Runs entirely in your browser · no data is stored or transmitted</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+/* ---------- form schema (mirrors "Pragmatic trial evaluation criteria.docx") ---------- */
+const IMPORTANCE=["Not at all important","Slightly important","Moderately important","Very important","Extremely important"];
+const FEASIBILITY=["Not feasible","Low feasibility","Neutral","Feasible","Very feasible"];
+const AGREEMENT=["Strongly disagree","Somewhat disagree","Somewhat agree","Agree","Strongly agree"];
+
+const SECTIONS=[
+  {id:"impact",title:"Potential Impact of the Study Question",
+   intro:"Rate the potential impact of the study question for each of the following groups.",
+   scale:IMPORTANCE,items:[
+    ["imp_system","To the health system"],
+    ["imp_clin","To clinicians"],
+    ["imp_pat","To patients"],
+    ["imp_ihc","To IHC"]]},
+  {id:"feas",title:"Feasibility",
+   intro:"Rate the feasibility of each aspect of investigating the study question.",
+   scale:FEASIBILITY,items:[
+    ["fea_rand","Randomization"],
+    ["fea_int","Intervention delivery"],
+    ["fea_n","Ability to obtain sample size"],
+    ["fea_out","Collection of outcome data"],
+    ["fea_work","Integration into existing workflows"],
+    ["fea_it","Complexity of IT build"]]},
+  {id:"team",title:"Investigative Team",
+   intro:"Please rate the investigative team.",
+   scale:AGREEMENT,items:[
+    ["team_complete","The investigative team has the ability to complete this trial"],
+    ["team_grants","The investigative team has the ability to obtain grants for the current or future pragmatic trials"]]},
+  {id:"guide",title:"Guiding Considerations",notes:true,
+   intro:"Additional questions that may guide your score before you post your overall score below. Notes are optional.",
+   items:[
+    ["g_uncert","Degree that the investigator provided evidence of clinical uncertainty, broadly and within the study site"],
+    ["g_riskpt","Degree that the risk of randomization is minimal to the patient"],
+    ["g_riskmd","Degree that the risk of randomization is minimal to the physician"],
+    ["g_current","Treatments/interventions in both arms are in current use"]]},
+  {id:"overall",title:"Overall Score",overall:true,
+   intro:"Score each component from 0 to 10. The total score is the sum of the three components (0–30).",
+   items:[
+    ["ov_ihc","Impact of the research to the IHC","0 = no impact","10 = most impactful"],
+    ["ov_hosp","Impact of the research to the hospital","0 = no impact","10 = most impactful"],
+    ["ov_feas","Feasibility of the research","0 = worst","10 = best"]]}
+];
+const META=[["pi","Study PI"],["study","Name of study"],["first","Evaluator first name"],["last","Evaluator last name"],["date","Date"]];
+
+/* ---------- state lives only in memory ---------- */
+let S={};
+function el(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+
+function scaleHTML(key,labels){
+  return `<div class="scale">${labels.map((l,i)=>{const v=i+1,id=key+"_"+v;
+    return `<div class="opt"><input type="radio" name="${key}" id="${id}" value="${v}" onchange="setVal('${key}',${v})">
+      <label for="${id}"><b>${v}</b>${l}</label></div>`}).join("")}</div>`;
+}
+function score11HTML(key,lo,hi){
+  let h=`<div class="scale s11">`;
+  for(let v=0;v<=10;v++){const id=key+"_"+v;
+    h+=`<div class="opt"><input type="radio" name="${key}" id="${id}" value="${v}" onchange="setVal('${key}',${v})">
+      <label for="${id}"><b>${v}</b></label></div>`}
+  return h+`</div><div class="anchors"><span>${lo}</span><span>${hi}</span></div>`;
+}
+
+function buildSections(){
+  const host=el("sections");host.innerHTML="";
+  SECTIONS.forEach((sec,i)=>{
+    const d=document.createElement("div");
+    d.className="sec open "+sec.id;d.id="sec_"+sec.id;
+    let body=`<p class="intro">${sec.intro}</p>`;
+    sec.items.forEach(([k,q,lo,hi])=>{
+      body+=`<div class="item"><p class="q">${q}</p>`;
+      if(sec.notes){
+        body+=`<textarea data-k="${k}" rows="2" placeholder="Notes (optional)" oninput="setVal('${k}',this.value)"></textarea>`;
+      }else if(sec.overall){
+        body+=score11HTML(k,lo,hi)+`<div class="field"><label class="lab">Comments</label>
+          <textarea data-k="${k}_c" rows="2" oninput="setVal('${k}_c',this.value)"></textarea></div>`;
+      }else{
+        body+=scaleHTML(k,sec.scale);
+      }
+      body+=`</div>`;
+    });
+    if(sec.overall)body+=`<div class="total"><div class="big" id="totalNum">—<small> / 30</small></div>
+      <div class="tl"><b>Total score</b>Sum of the three components above</div></div>`;
+    d.innerHTML=`<div class="head" onclick="toggleSec('${sec.id}')">
+        <span class="num">${i+1}</span><h2>${sec.title}</h2>
+        <span class="dot" id="dot_${sec.id}"></span><span class="chev">▶</span></div>
+      <div class="body">${body}</div>`;
+    host.appendChild(d);
+  });
+}
+function toggleSec(id){el("sec_"+id).classList.toggle("open")}
+function setVal(k,v){S[k]=v;refresh()}
+
+/* ---------- progress & total ---------- */
+function required(){      // rated items + overall scores + study info (guiding notes are optional)
+  const ks=META.map(m=>m[0]);
+  SECTIONS.forEach(s=>{if(!s.notes)s.items.forEach(it=>ks.push(it[0]))});
+  return ks;
+}
+function has(k){return S[k]!==undefined&&S[k]!==null&&String(S[k]).trim()!==""}
+function total(){
+  const ks=["ov_ihc","ov_hosp","ov_feas"];
+  return ks.every(has)?ks.reduce((a,k)=>a+Number(S[k]),0):null;
+}
+function partialTotal(){return ["ov_ihc","ov_hosp","ov_feas"].filter(has).reduce((a,k)=>a+Number(S[k]),0)}
+function refresh(){
+  const ks=required(),done=ks.filter(has).length,pct=Math.round(100*done/ks.length);
+  el("progFill").style.width=pct+"%";el("progTxt").textContent=pct+"% complete";
+  SECTIONS.forEach(s=>{
+    const n=s.items.filter(it=>has(it[0])).length,dot=el("dot_"+s.id);
+    dot.className="dot"+(n===0?"":n>=s.items.length?" full":" part");
+  });
+  const t=total(),anyOv=["ov_ihc","ov_hosp","ov_feas"].some(has);
+  el("totalNum").innerHTML=(t!==null?t:anyOv?partialTotal()+"*":"—")+"<small> / 30</small>";
+  el("msg").textContent="";
+}
+function dirty(){return Object.entries(S).some(([k,v])=>k!=="date"&&String(v).trim()!=="")}
+
+function clearForm(){
+  if(dirty()&&!confirm("Clear every answer on this form? This can't be undone."))return;
+  S={};
+  document.querySelectorAll("input[type=text],input[type=date],textarea").forEach(n=>n.value="");
+  document.querySelectorAll("input[type=radio]").forEach(n=>n.checked=false);
+  el("date").value=today();S.date=el("date").value;
+  refresh();window.scrollTo({top:0,behavior:"smooth"});
+}
+function today(){const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)}
+function fmtDate(iso){
+  if(!iso)return "";const [y,m,d]=iso.split("-").map(Number);
+  return new Date(y,m-1,d).toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
+}
+
+/* ---------- PDF (generated in-browser with jsPDF; nothing leaves the page) ---------- */
+function downloadPDF(){
+  const missing=required().filter(k=>!has(k));
+  if(missing.length&&!confirm(missing.length+" required item"+(missing.length>1?"s are":" is")+" still blank. Download the PDF anyway?")){
+    const first=missing[0],node=el(first)||document.querySelector(`[name="${first}"]`);
+    if(node){const sec=node.closest(".sec");if(sec)sec.classList.add("open");node.scrollIntoView({behavior:"smooth",block:"center"})}
+    return;
+  }
+  if(!window.jspdf){el("msg").textContent="The PDF library didn't load — check your internet connection and reload.";return}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:"pt",format:"letter"});
+  const W=doc.internal.pageSize.getWidth(),M=54;
+  const RED=[192,18,48],BRONZE=[150,97,42],INK=[36,34,32],MUTED=[109,104,98],LINE=[229,224,216],CHIP=[245,243,239];
+  let y=M;
+
+  doc.setFont("helvetica","bold");doc.setFontSize(19);doc.setTextColor(...RED);
+  doc.text("Pragmatic Trial Evaluation",M,y+4);
+  doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(...MUTED);
+  doc.text("Criteria for reviewing proposed pragmatic trials",M,y+19);
+  y+=28;doc.setDrawColor(...RED);doc.setLineWidth(1.5);doc.line(M,y,W-M,y);y+=6;
+
+  const evaluator=[S.first,S.last].filter(v=>v&&v.trim()).join(" ");
+  doc.autoTable({
+    startY:y,margin:{left:M,right:M},theme:"plain",
+    styles:{font:"helvetica",fontSize:10,cellPadding:{top:3,bottom:3,left:0,right:6},textColor:INK},
+    columnStyles:{0:{fontStyle:"bold",cellWidth:120,textColor:MUTED}},
+    body:[["Study PI",S.pi||"—"],["Name of study",S.study||"—"],["Completed by",evaluator||"—"],["Date",fmtDate(S.date)||"—"]]
+  });
+  y=doc.lastAutoTable.finalY+8;
+
+  const heading=(n,t)=>{
+    if(y>doc.internal.pageSize.getHeight()-150){doc.addPage();y=M}
+    y+=14;
+    doc.setFillColor(...BRONZE);doc.roundedRect(M,y-11,15,15,3,3,"F");
+    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(255,255,255);
+    doc.text(String(n),M+7.5,y-0.5,{align:"center"});
+    doc.setFontSize(12.5);doc.setTextColor(...BRONZE);doc.text(t,M+22,y);
+    y+=6;doc.setDrawColor(...LINE);doc.setLineWidth(.75);doc.line(M,y,W-M,y);y+=4;
+  };
+  const tableOpts={
+    margin:{left:M,right:M},theme:"grid",rowPageBreak:"avoid",
+    styles:{font:"helvetica",fontSize:9.5,cellPadding:5,textColor:INK,lineColor:LINE,lineWidth:.5,valign:"middle"},
+    headStyles:{fillColor:CHIP,textColor:MUTED,fontStyle:"bold",fontSize:8.5}
+  };
+
+  SECTIONS.forEach((sec,i)=>{
+    heading(i+1,sec.title);
+    if(sec.notes){
+      doc.autoTable({...tableOpts,startY:y,head:[["Consideration","Notes"]],
+        columnStyles:{0:{cellWidth:230,fontStyle:"bold"}},
+        body:sec.items.map(([k,q])=>[q,has(k)?S[k].trim():"—"])});
+    }else if(sec.overall){
+      const t=total();
+      doc.autoTable({...tableOpts,startY:y,head:[["Component","Score","Comments"]],
+        columnStyles:{0:{cellWidth:190,fontStyle:"bold"},1:{cellWidth:60,halign:"center",fontStyle:"bold",fontSize:11}},
+        body:sec.items.map(([k,q])=>[q,has(k)?S[k]+" / 10":"—",has(k+"_c")?S[k+"_c"].trim():""]),
+        foot:[["Total score",t!==null?t+" / 30":(partialTotal()+" / 30 (incomplete)"),""]],
+        footStyles:{fillColor:[247,232,234],textColor:RED,fontStyle:"bold",fontSize:11}});
+    }else{
+      doc.autoTable({...tableOpts,startY:y,head:[["Item","Rating"]],
+        columnStyles:{0:{fontStyle:"bold"},1:{cellWidth:170}},
+        body:sec.items.map(([k,q])=>[q,has(k)?S[k]+" — "+sec.scale[S[k]-1]:"—"])});
+    }
+    y=doc.lastAutoTable.finalY+6;
+  });
+
+  const pages=doc.getNumberOfPages(),H=doc.internal.pageSize.getHeight();
+  for(let p=1;p<=pages;p++){
+    doc.setPage(p);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(...MUTED);
+    doc.text((S.study?S.study+" · ":"")+"Pragmatic Trial Evaluation",M,H-28);
+    doc.text("Page "+p+" of "+pages,W-M,H-28,{align:"right"});
+  }
+  const slug=s=>String(s||"").trim().replace(/[^\w]+/g,"-").replace(/^-|-$/g,"");
+  const name=["PTE",slug(S.study)||"study",slug(S.last),S.date].filter(Boolean).join("_");
+  doc.save(name+".pdf");
+}
+
+/* ---------- init ---------- */
+document.addEventListener("DOMContentLoaded",()=>{
+  buildSections();
+  META.forEach(([id])=>el(id).addEventListener("input",e=>setVal(id,e.target.value)));
+  el("date").value=today();S.date=el("date").value;
+  refresh();
+  window.addEventListener("beforeunload",e=>{if(dirty()){e.preventDefault();e.returnValue=""}});
+});
+</script>
+</body>
+</html>
